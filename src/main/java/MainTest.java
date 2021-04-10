@@ -8,8 +8,12 @@ import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
 import com.rabbitmq.client.DeliverCallback;
+import org.iot.raspberry.grovepi.GrovePi;
+import org.iot.raspberry.grovepi.pi4j.GrovePi4J;
 
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -19,50 +23,16 @@ import java.util.concurrent.TimeoutException;
 
 public class MainTest {
 
-    private final static String QUEUE_NAME = "Cafe";
-
     public static void main(String[] args) throws IOException, TimeoutException {
 
-        HashMap<BoardTypeEnum, List<IBoard>> boards = Robot.JsonToRobot(args[0]);
-        Ev3Board ev3B = (Ev3Board) boards.get(BoardTypeEnum.EV3).get(0);
-        GrovePiBoard grovePi = (GrovePiBoard) boards.get(BoardTypeEnum.GrovePi).get(0);
+//        HashMap<BoardTypeEnum, List<IBoard>> boards = Robot.JsonToRobot("{\"EV3\":[{\"Port\":\"rfcomm3\"}],\"GrovePi\":[{\"A0\":\"\",\"A1\":\"\",\"A2\":\"\",\"D2\":\"Led\",\"D3\":\"\",\"D4\":\"Ultrasonic\",\"D5\":\"\",\"D6\":\"\",\"D7\":\"\",\"D8\":\"Led\"}]}}");
 
+//        Ev3Board ev3B = (Ev3Board) boards.get(BoardTypeEnum.EV3).get(0);
+//        GrovePiBoard grovePi = (GrovePiBoard) boards.get(BoardTypeEnum.GrovePi).get(0);
 
-        ConnectionFactory factory = new ConnectionFactory();
-        Connection connection = factory.newConnection();
-        Channel channel = connection.createChannel();
-
-        channel.queueDeclare(QUEUE_NAME, false, false, false, null);
-        System.out.println(" [*] Waiting for messages. To exit press CTRL+C");
-
-        DeliverCallback deliverCallback = (consumerTag, delivery) -> {
-
-            String message = new String(delivery.getBody(), StandardCharsets.UTF_8);
-            System.out.println(" [x] Received '" + message + "'");
-
-            JsonObject obj = new JsonParser().parse(message).getAsJsonObject();
-            String command = String.valueOf(obj.get("Command"));
-            String dataJsonString = String.valueOf(obj.get("Data"));
-            switch (command){
-                case "\"Drive\"":
-                    JsonObject dataJsonObj = new JsonParser().parse(dataJsonString).getAsJsonObject();
-                    String driveDataJsonString = String.valueOf(dataJsonObj.get("EV3"));
-                    JsonObject driveDataJsonObj = new JsonParser().parse(driveDataJsonString).getAsJsonObject();
-                    Map<IEv3Port, Double> forward = new HashMap<>();
-                    for(Map.Entry<String, JsonElement> entry: driveDataJsonObj.entrySet()){
-                        IEv3Port port = Ev3DrivePort.valueOf(entry.getKey());
-                        double speed = entry.getValue().getAsDouble();
-                        forward.put(port, speed);
-                        System.out.println("port: "+ port +", speed:"+ speed);
-                    }
-                    ev3B.drive(forward);
-                    break;
-
-                default:
-                    break;
-            }
-        };
-        channel.basicConsume(QUEUE_NAME, true, deliverCallback, consumerTag -> { });
+        RobotSensorsData robotSensorsData = new RobotSensorsData();
+        ConnectionHandler connectionHandler = new ConnectionHandler(robotSensorsData);
+        connectionHandler.openQueues();
 
 //        Map<IEv3Port, Double> forward2 = Map.of(
 //                Ev3DrivePort.B, 35.0,
