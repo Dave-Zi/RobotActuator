@@ -8,6 +8,10 @@ import com.google.gson.internal.LinkedTreeMap;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -16,10 +20,15 @@ class CommandHandler {
     private RobotSensorsData robotSensorsData;
     private HashMap<BoardTypeEnum, List<IBoard>> robot;
 
+    // Uniform Interface for commands arriving from BPjs
     private ICommand subscribe = this::subscribe;
     private ICommand unsubscribe = this::unsubscribe;
     private ICommand build = this::build;
     private ICommand drive = this::drive;
+
+    // Thread for data collection from robot sensors
+    private ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
+    private Future dataCollectionFuture;
 
     private Map<String, ICommand> commandToMethod = Stream.of(new Object[][] {
             { "\"Subscribe\"",  subscribe},
@@ -32,48 +41,115 @@ class CommandHandler {
         this.robotSensorsData = robotSensorsData;
     }
 
-    MessageContent parseCommand(String message){
+    // Parse & execute command from message that arrived from BPjs
+    void parseAndExecuteCommand(String message) throws IOException {
         JsonObject obj = new JsonParser().parse(message).getAsJsonObject();
         String command = String.valueOf(obj.get("Command"));
         String dataJsonString = String.valueOf(obj.get("Data"));
-        return new MessageContent(command, dataJsonString);
+
+        ICommand commandToExecute = commandToMethod.get(command);
+        commandToExecute.executeCommand(dataJsonString);
     }
 
-    ICommand getCommand(String command){
-        return commandToMethod.get(command);
-    }
-
+    /**
+     * Subscribe to new ports.
+     *
+     * 1. Stop data collection from ports
+     * 2. Add new ports to Robot Sensor Data Object.
+     * 3. Restart Data Collection Thread.
+     *
+     * @param json string from BPjs messages
+     */
     private void subscribe(String json){
         System.out.println("in subscribe!");
         robotSensorsData.addToBoardsMap(json);
-    }
 
+        if (dataCollectionFuture != null){
+            dataCollectionFuture.cancel(true);
+        }
+
+
+        try {
+            dataCollectionFuture = executor.scheduleWithFixedDelay(dataCollector, 0L, 50L, TimeUnit.MILLISECONDS);
+        } catch (Exception e){
+            e.printStackTrace();
+        }
+    }
+    /**
+     * Unsubscribe from ports.
+     *
+     * 1. Stop data collection from ports
+     * 2. Remove ports from Robot Sensor Data Object.
+     * 3. Restart Data Collection Thread.
+     *
+     * @param json string from BPjs messages
+     */
     private void unsubscribe(String json){
         System.out.println("in unsubscribe!");
+
+        if (dataCollectionFuture != null){
+            dataCollectionFuture.cancel(true);
+        }
         robotSensorsData.removeFromBoardsMap(json);
+        executor.scheduleWithFixedDelay(dataCollector, 0L, 50L, TimeUnit.MILLISECONDS);
     }
 
+    /**
+     * Build IBoards according to json data from BPjs Build event.
+     * @param json instructions on which IBoards to build.
+     * @throws IOException is thrown when an IBoard construction failed, might happen duo to communication problems with boards.
+     */
     private void build(String json) throws IOException {
-        robot = Robot.JsonToRobot(json);
+//        robot = Robot.JsonToRobot(json);
+
+        List<IBoard> ev3 = Arrays.asList(new MockBoard(), new MockBoard());
+        List<IBoard> grovePi = Arrays.asList(new MockBoard(), new MockBoard());
+        robot = new HashMap<>();
+        robot.put(BoardTypeEnum.EV3, ev3);
+        robot.put(BoardTypeEnum.GrovePi, grovePi);
+
+        if (dataCollectionFuture != null){
+            dataCollectionFuture.cancel(true);
+        }
+        robotSensorsData.clear();
         System.out.println("building success!");
 
     }
 
+    /**
+     * Call IBoard's 'drive' method according to json data
+     * @param json info on boards, ports and values to call 'drive' on.
+     */
     private void drive(String json){
-        Map<BoardTypeEnum, Map<Integer, Map<IPortEnums, Double>>> activationMap = buildActivationMap(json);
 
-        activationMap.forEach((boardName, indexesMap) -> {
-            ArrayList<IBoard> boardsList = (ArrayList<IBoard>) robot.get(boardName);
+        try {
+            if (robot == null){
+                return;
+            }
+            Map<BoardTypeEnum, Map<Integer, Map<IPortEnums, Double>>> activationMap = buildActivationMap(json);
 
-            activationMap.get(boardName).forEach((index, portsMap) -> {
-                @SuppressWarnings("unchecked")
-                IBoard<IPortEnums> board = boardsList.get(index);
-                Map<IPortEnums, Double> speedMap = activationMap.get(boardName).get(index);
-                board.drive(speedMap);
+            activationMap.forEach((boardName, indexesMap) -> {
+                ArrayList<IBoard> boardsList = new ArrayList<>(robot.get(boardName));
+
+                activationMap.get(boardName).forEach((index, portsMap) -> {
+                    @SuppressWarnings("unchecked")
+                    IBoard<IPortEnums> board = boardsList.get(index);
+                    Map<IPortEnums, Double> speedMap = activationMap.get(boardName).get(index);
+                    board.drive(speedMap);
+                });
             });
-        });
+        } catch (Exception e){
+            e.printStackTrace();
+        }
+
     }
 
+    /**
+     * Build Map of Board Types -> IBoard Index -> Port and it's speed value.
+     * This map is used to call 'drive' on each IBoard that is indexed on the result
+     * @param json build map according to this json
+     * @return Map with boards, their indexes, and the data to call 'drive' on.
+     */
     private Map<BoardTypeEnum, Map<Integer, Map<IPortEnums, Double>>> buildActivationMap(String json){
         Map<BoardTypeEnum, Map<Integer, Map<IPortEnums, Double>>> result = new HashMap<>();
         Gson gson = new Gson();
@@ -127,28 +203,40 @@ class CommandHandler {
         return result;
     }
 
+    /**
+     * Create Runnable, which build json with all the subscribed ports and their connected sensors values.
+     * This json is then used to update the sensor values inside RobotSensorsData.
+     */
+    private Runnable dataCollector = () -> {
 
+        try {
+            JsonObject jsonBoards = new JsonObject();
+            robotSensorsData.getBoardNames().forEach(boardString ->{
+                JsonObject jsonIndexes = new JsonObject();
+                BoardTypeEnum board = BoardTypeEnum.valueOf(boardString);
+                robotSensorsData.getBoardIndexes(boardString).forEach(indexString -> {
+                    JsonObject jsonPorts = new JsonObject();
+                    int index = Integer.parseInt(indexString.substring(1));
+                    robotSensorsData.getPorts(boardString, indexString).forEach(portString -> {
+                        IPortEnums port = board.getPortType(portString);
+                        Double data = robot.get(board).get(index).getDoubleSensorData(port, 0);
+                        jsonPorts.addProperty(portString, data);
+                    });
+                    jsonIndexes.add(indexString, jsonPorts);
+                });
+                jsonBoards.add(boardString, jsonIndexes);
+            });
+            robotSensorsData.updateBoardMapValues(jsonBoards.toString());
+        }   catch (Exception e){
+            e.printStackTrace();
+        }
+    };
 
+    /**
+     * Uniform Interface for BPjs Commands
+     */
     @FunctionalInterface
     public interface ICommand {
         void executeCommand(String json) throws IOException;
-    }
-}
-
-final class MessageContent {
-    private final String command;
-    private final String data;
-
-    MessageContent(String command, String data) {
-        this.command = command;
-        this.data = data;
-    }
-
-    String getCommand() {
-        return command;
-    }
-
-    String  getData() {
-        return data;
     }
 }
