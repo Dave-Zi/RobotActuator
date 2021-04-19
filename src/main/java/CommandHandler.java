@@ -63,17 +63,7 @@ class CommandHandler {
     private void subscribe(String json){
         System.out.println("in subscribe!");
         robotSensorsData.addToBoardsMap(json);
-
-        if (dataCollectionFuture != null){
-            dataCollectionFuture.cancel(true);
-        }
-
-
-        try {
-            dataCollectionFuture = executor.scheduleWithFixedDelay(dataCollector, 0L, 50L, TimeUnit.MILLISECONDS);
-        } catch (Exception e){
-            e.printStackTrace();
-        }
+        startExecutor();
     }
     /**
      * Unsubscribe from ports.
@@ -86,12 +76,8 @@ class CommandHandler {
      */
     private void unsubscribe(String json){
         System.out.println("in unsubscribe!");
-
-        if (dataCollectionFuture != null){
-            dataCollectionFuture.cancel(true);
-        }
         robotSensorsData.removeFromBoardsMap(json);
-        executor.scheduleWithFixedDelay(dataCollector, 0L, 50L, TimeUnit.MILLISECONDS);
+        startExecutor();
     }
 
     /**
@@ -99,9 +85,12 @@ class CommandHandler {
      * @param json instructions on which IBoards to build.
      * @throws IOException is thrown when an IBoard construction failed, might happen duo to communication problems with boards.
      */
-    private void build(String json) throws IOException {
-//        robot = Robot.JsonToRobot(json);
-
+    private void build(String json) {
+//        try {
+//            robot = Robot.JsonToRobot(json);
+//        } catch (Exception e){
+//            e.printStackTrace();
+//        }
         List<IBoard> ev3 = Arrays.asList(new MockBoard(), new MockBoard());
         List<IBoard> grovePi = Arrays.asList(new MockBoard(), new MockBoard());
         robot = new HashMap<>();
@@ -133,9 +122,19 @@ class CommandHandler {
 
                 activationMap.get(boardName).forEach((index, portsMap) -> {
                     @SuppressWarnings("unchecked")
-                    IBoard<IPortEnums> board = boardsList.get(index);
+                    IBoard<IPortEnums> board = boardsList.get(index - 1);
                     Map<IPortEnums, Double> speedMap = activationMap.get(boardName).get(index);
-                    board.drive(speedMap);
+                    ArrayList<DriveDataObject> driveList = new ArrayList<>();
+                    speedMap.forEach((port, speed) -> driveList.add(new DriveDataObject(port, speed, 180)));
+                    speedMap.forEach((a, b) -> System.out.println(a + " - " + b));
+                    System.out.println(robotSensorsData.getPortsAndValues("EV3", "_1").get("_2"));
+                    board.rotate(driveList);
+
+                    try {
+                        Thread.sleep(1500);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
                 });
             });
         } catch (Exception e){
@@ -219,7 +218,7 @@ class CommandHandler {
                     int index = Integer.parseInt(indexString.substring(1));
                     robotSensorsData.getPorts(boardString, indexString).forEach(portString -> {
                         IPortEnums port = board.getPortType(portString);
-                        Double data = robot.get(board).get(index).getDoubleSensorData(port, 0);
+                        Double data = robot.get(board).get(index - 1).getDoubleSensorData(port, 0);
                         jsonPorts.addProperty(portString, data);
                     });
                     jsonIndexes.add(indexString, jsonPorts);
@@ -231,6 +230,18 @@ class CommandHandler {
             e.printStackTrace();
         }
     };
+
+    private void startExecutor(){
+        if (dataCollectionFuture != null){
+            dataCollectionFuture.cancel(true);
+        }
+
+        try {
+            dataCollectionFuture = executor.scheduleWithFixedDelay(dataCollector, 0L, 5L, TimeUnit.MILLISECONDS);
+        } catch (Exception e){
+            e.printStackTrace();
+        }
+    }
 
     /**
      * Uniform Interface for BPjs Commands
