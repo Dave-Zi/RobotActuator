@@ -18,14 +18,14 @@ public class MainTest {
 
 //        String json = "{\"EV3\": {1: {}, 2 : {\"B\": 32, \"C\": 31}}}";
 //        commandHandler.getCommand("\"Drive\"").executeCommand(json);
-        communicationHandler.openSendQueue(true);
+        communicationHandler.openSendQueue(true, false);
         communicationHandler.openReceiveQueue(false);
 
         while (true){
 
             if (robotSensorsData.isUpdated()) {
                 String json = robotSensorsData.toJson();
-                communicationHandler.send(json);
+                communicationHandler.send(json, false);
             }
         }
     }
