@@ -209,14 +209,16 @@ class CommandHandler {
     private Runnable dataCollector = () -> {
 
         try {
+            RobotSensorsData robotSensorsDataCopy = new RobotSensorsData(robotSensorsData);
+
             JsonObject jsonBoards = new JsonObject();
-            robotSensorsData.getBoardNames().forEach(boardString ->{
+            robotSensorsDataCopy.getBoardNames().forEach(boardString ->{
                 JsonObject jsonIndexes = new JsonObject();
                 BoardTypeEnum board = BoardTypeEnum.valueOf(boardString);
-                robotSensorsData.getBoardIndexes(boardString).forEach(indexString -> {
+                robotSensorsDataCopy.getBoardIndexes(boardString).forEach(indexString -> {
                     JsonObject jsonPorts = new JsonObject();
                     int index = Integer.parseInt(indexString.substring(1));
-                    robotSensorsData.getPorts(boardString, indexString).forEach(portString -> {
+                    robotSensorsDataCopy.getPorts(boardString, indexString).forEach(portString -> {
                         IPortEnums port = board.getPortType(portString);
                         Double data = robot.get(board).get(index - 1).getDoubleSensorData(port, 0);
                         jsonPorts.addProperty(portString, data);
