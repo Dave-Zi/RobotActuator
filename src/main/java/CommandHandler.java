@@ -19,6 +19,7 @@ class CommandHandler {
 
     private RobotSensorsData robotSensorsData;
     private HashMap<BoardTypeEnum, List<IBoard>> robot;
+    private final int commandTimeout = 150;
 
     // Uniform Interface for commands arriving from BPjs
     private ICommand subscribe = this::subscribe;
@@ -133,7 +134,7 @@ class CommandHandler {
                     board.drive(driveList);
 
                     try {
-                        Thread.sleep(150);
+                        Thread.sleep(commandTimeout);
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
@@ -169,7 +170,7 @@ class CommandHandler {
                     board.rotate(driveList);
 
                     try {
-                        Thread.sleep(1500);
+                        Thread.sleep(commandTimeout);
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
@@ -206,7 +207,7 @@ class CommandHandler {
                     sensorsDataMap.forEach((port, sensorValue) -> System.out.println("Sensor in port " + port + " was set to value " + (sensorValue > 0)));
                    // System.out.println(robotSensorsData.getPortsAndValues("EV3", "_1").get("_2"));
                     try {
-                        Thread.sleep(150);
+                        Thread.sleep(commandTimeout);
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
