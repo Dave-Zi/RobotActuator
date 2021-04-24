@@ -25,16 +25,22 @@ class CommandHandler {
     private ICommand unsubscribe = this::unsubscribe;
     private ICommand build = this::build;
     private ICommand drive = this::drive;
+    private ICommand rotate = this::rotate;
+    private ICommand setSensor = this::setSensor;
+
 
     // Thread for data collection from robot sensors
     private ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
     private Future dataCollectionFuture;
 
-    private Map<String, ICommand> commandToMethod = Stream.of(new Object[][] {
-            { "\"Subscribe\"",  subscribe},
-            { "\"Unsubscribe\"", unsubscribe },
-            { "\"Build\"", build },
-            { "\"Drive\"", drive }
+    private Map<String, ICommand> commandToMethod = Stream.of(new Object[][]{
+            {"\"Subscribe\"", subscribe},
+            {"\"Unsubscribe\"", unsubscribe},
+            {"\"Build\"", build},
+            {"\"Drive\"", drive},
+            {"\"Rotate\"", rotate},
+            {"\"SetSensor\"", setSensor}
+
     }).collect(Collectors.toMap(data -> (String) data[0], data -> (ICommand) data[1]));
 
     CommandHandler(RobotSensorsData robotSensorsData){
@@ -109,6 +115,7 @@ class CommandHandler {
      * @param json info on boards, ports and values to call 'drive' on.
      */
     private void drive(String json){
+        System.out.println("In drive");
 
         try {
             if (robot == null){
@@ -122,11 +129,7 @@ class CommandHandler {
                 activationMap.get(boardName).forEach((index, portsMap) -> {
                     @SuppressWarnings("unchecked")
                     IBoard<IPortEnums> board = boardsList.get(index - 1);
-                    Map<IPortEnums, Double> speedMap = activationMap.get(boardName).get(index);
-                    ArrayList<DriveDataObject> driveList = new ArrayList<>();
-                    speedMap.forEach((port, speed) -> driveList.add(new DriveDataObject(port, speed, 180)));
-                    speedMap.forEach((a, b) -> System.out.println(a + " - " + b));
-                    System.out.println(robotSensorsData.getPortsAndValues("EV3", "_1").get("_2"));
+                    ArrayList<DriveDataObject> driveList = getDriveList(activationMap, boardName, index);
                     board.drive(driveList);
 
                     try {
@@ -136,7 +139,80 @@ class CommandHandler {
                     }
                 });
             });
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+    }
+
+
+    /**
+     * Call IBoard's 'rotate' method according to json data
+     *
+     * @param json info on boards, ports and values to call 'rotate' on.
+     */
+    private void rotate(String json) {
+        System.out.println("in rotate");
+        try {
+            if (robot == null) {
+                return;
+            }
+            Map<BoardTypeEnum, Map<Integer, Map<IPortEnums, Double>>> activationMap = buildActivationMap(json);
+
+            activationMap.forEach((boardName, indexesMap) -> {
+                ArrayList<IBoard> boardsList = new ArrayList<>(robot.get(boardName));
+
+                activationMap.get(boardName).forEach((index, portsMap) -> {
+                    @SuppressWarnings("unchecked")
+                    IBoard<IPortEnums> board = boardsList.get(index - 1);
+                    ArrayList<DriveDataObject> driveList = getDriveList(activationMap, boardName, index);
+                    board.rotate(driveList);
+
+                    try {
+                        Thread.sleep(1500);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                });
+            });
         } catch (Exception e){
+            e.printStackTrace();
+        }
+
+    }
+
+    /**
+     * Call IBoard's 'setSensorData' method according to json data
+     *
+     * @param json info on boards, ports and values to call 'setSensorData' on.
+     */
+    private void setSensor(String json) {
+        System.out.println("In set sensor");
+        try {
+            if (robot == null) {
+                return;
+            }
+            Map<BoardTypeEnum, Map<Integer, Map<IPortEnums, Double>>> activationMap = buildActivationMap(json);
+
+            activationMap.forEach((boardName, indexesMap) -> {
+                ArrayList<IBoard> boardsList = new ArrayList<>(robot.get(boardName));
+
+                activationMap.get(boardName).forEach((index, portsMap) -> {
+                    @SuppressWarnings("unchecked")
+                    IBoard<IPortEnums> board = boardsList.get(index - 1);
+
+                    Map<IPortEnums, Double> sensorsDataMap = activationMap.get(boardName).get(index);
+                    sensorsDataMap.forEach((port, sensorValue) -> board.setSensorData(port, sensorValue > 0));
+                    sensorsDataMap.forEach((port, sensorValue) -> System.out.println("Sensor in port " + port + " was set to value " + (sensorValue > 0)));
+                   // System.out.println(robotSensorsData.getPortsAndValues("EV3", "_1").get("_2"));
+                    try {
+                        Thread.sleep(150);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                });
+            });
+        } catch (Exception e) {
             e.printStackTrace();
         }
 
@@ -200,6 +276,16 @@ class CommandHandler {
         }
         return result;
     }
+
+    private ArrayList<DriveDataObject> getDriveList(Map<BoardTypeEnum, Map<Integer, Map<IPortEnums, Double>>> activationMap, BoardTypeEnum boardName, int index) {
+        Map<IPortEnums, Double> speedMap = activationMap.get(boardName).get(index);
+        ArrayList<DriveDataObject> driveList = new ArrayList<>();
+        speedMap.forEach((port, speed) -> driveList.add(new DriveDataObject(port, speed, 180)));
+        speedMap.forEach((a, b) -> System.out.println(a + " - " + b));
+        System.out.println(robotSensorsData.getPortsAndValues("EV3", "_1").get("_2"));
+        return driveList;
+    }
+
 
     /**
      * Create Runnable, which build json with all the subscribed ports and their connected sensors values.
