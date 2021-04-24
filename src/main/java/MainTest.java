@@ -1,4 +1,5 @@
 import Communication.CommunicationHandler;
+import Communication.ICommunication;
 import RobotData.RobotSensorsData;
 import com.rabbitmq.client.Delivery;
 
@@ -13,8 +14,8 @@ public class MainTest {
     public static void main(String[] args) throws IOException, TimeoutException {
         RobotSensorsData robotSensorsData = new RobotSensorsData();
         commandHandler = new CommandHandler(robotSensorsData);
-        CommunicationHandler communicationHandler = new CommunicationHandler("Data", "Commands");
-        communicationHandler.setMyCallback(MainTest::onReceiveCallback);
+        ICommunication communicationHandler = new CommunicationHandler("Data", "Commands");
+        communicationHandler.setCallback(MainTest::onReceiveCallback);
 
 //        String json = "{\"EV3\": {1: {}, 2 : {\"B\": 32, \"C\": 31}}}";
 //        commandHandler.getCommand("\"Drive\"").executeCommand(json);

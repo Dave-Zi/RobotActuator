@@ -295,7 +295,7 @@ class CommandHandler {
     private Runnable dataCollector = () -> {
 
         try {
-            RobotSensorsData robotSensorsDataCopy = new RobotSensorsData(robotSensorsData);
+            RobotSensorsData robotSensorsDataCopy = robotSensorsData.clone();
 
             JsonObject jsonBoards = new JsonObject();
             robotSensorsDataCopy.getBoardNames().forEach(boardString ->{
