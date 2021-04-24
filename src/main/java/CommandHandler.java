@@ -19,6 +19,7 @@ class CommandHandler {
 
     private RobotSensorsData robotSensorsData;
     private HashMap<BoardTypeEnum, List<IBoard>> robot;
+    private final int commandTimeout = 150;
 
     // Uniform Interface for commands arriving from BPjs
     private ICommand subscribe = this::subscribe;
@@ -89,19 +90,18 @@ class CommandHandler {
     /**
      * Build IBoards according to json data from BPjs Build event.
      * @param json instructions on which IBoards to build.
-     * @throws IOException is thrown when an IBoard construction failed, might happen duo to communication problems with boards.
      */
     private void build(String json) {
-//        try {
-//            robot = Robot.JsonToRobot(json);
-//        } catch (Exception e){
-//            e.printStackTrace();
-//        }
-        List<IBoard> ev3 = Arrays.asList(new MockBoard(), new MockBoard());
-        List<IBoard> grovePi = Arrays.asList(new MockBoard(), new MockBoard());
-        robot = new HashMap<>();
-        robot.put(BoardTypeEnum.EV3, ev3);
-        robot.put(BoardTypeEnum.GrovePi, grovePi);
+        try {
+            robot = Robot.JsonToRobot(json);
+        } catch (Exception e){
+            e.printStackTrace();
+        }
+//        List<IBoard> ev3 = Arrays.asList(new MockBoard(), new MockBoard());
+//        List<IBoard> grovePi = Arrays.asList(new MockBoard(), new MockBoard());
+//        robot = new HashMap<>();
+//        robot.put(BoardTypeEnum.EV3, ev3);
+//        robot.put(BoardTypeEnum.GrovePi, grovePi);
 
         if (dataCollectionFuture != null){
             dataCollectionFuture.cancel(true);
@@ -134,7 +134,7 @@ class CommandHandler {
                     board.drive(driveList);
 
                     try {
-                        Thread.sleep(1500);
+                        Thread.sleep(commandTimeout);
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
@@ -170,7 +170,7 @@ class CommandHandler {
                     board.rotate(driveList);
 
                     try {
-                        Thread.sleep(1500);
+                        Thread.sleep(commandTimeout);
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
@@ -207,7 +207,7 @@ class CommandHandler {
                     sensorsDataMap.forEach((port, sensorValue) -> System.out.println("Sensor in port " + port + " was set to value " + (sensorValue > 0)));
                    // System.out.println(robotSensorsData.getPortsAndValues("EV3", "_1").get("_2"));
                     try {
-                        Thread.sleep(1500);
+                        Thread.sleep(commandTimeout);
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
@@ -307,6 +307,7 @@ class CommandHandler {
                     robotSensorsDataCopy.getPorts(boardString, indexString).forEach(portString -> {
                         IPortEnums port = board.getPortType(portString);
                         Double data = robot.get(board).get(index - 1).getDoubleSensorData(port, 0);
+//                        System.out.println(data);
                         jsonPorts.addProperty(portString, data);
                     });
                     jsonIndexes.add(indexString, jsonPorts);
@@ -325,7 +326,7 @@ class CommandHandler {
         }
 
         try {
-            dataCollectionFuture = executor.scheduleWithFixedDelay(dataCollector, 0L, 5L, TimeUnit.MILLISECONDS);
+            dataCollectionFuture = executor.scheduleWithFixedDelay(dataCollector, 0L, 100L, TimeUnit.MILLISECONDS);
         } catch (Exception e){
             e.printStackTrace();
         }
