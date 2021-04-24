@@ -116,6 +116,7 @@ class CommandHandler {
      * @param json info on boards, ports and values to call 'drive' on.
      */
     private void drive(String json){
+        System.out.println("In drive");
 
         try {
             if (robot == null){
@@ -187,7 +188,7 @@ class CommandHandler {
      * @param json info on boards, ports and values to call 'setSensorData' on.
      */
     private void setSensor(String json) {
-
+        System.out.println("In set sensor");
         try {
             if (robot == null) {
                 return;

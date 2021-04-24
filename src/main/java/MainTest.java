@@ -33,8 +33,8 @@ public class MainTest {
     private static void onReceiveCallback(String consumerTag, Delivery delivery) throws IOException {
 
         String message = new String(delivery.getBody(), StandardCharsets.UTF_8);
-//        System.out.println(" [x] Received '" + message + "'");
-//        System.out.println("Msg no. " + delivery.getProperties().getMessageId());
+        System.out.println(" [x] Received '" + message + "'");
+        System.out.println("Msg no. " + delivery.getProperties().getMessageId());
         commandHandler.parseAndExecuteCommand(message);
     }
 
