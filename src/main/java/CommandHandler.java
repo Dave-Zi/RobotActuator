@@ -18,7 +18,7 @@ import java.util.stream.Stream;
 class CommandHandler {
 
     private RobotSensorsData robotSensorsData;
-    private HashMap<BoardTypeEnum, List<IBoard>> robot;
+    private Map<BoardTypeEnum, Map<Integer, IBoard>> robot;
     private final int commandTimeout = 150;
 
     // Uniform Interface for commands arriving from BPjs
@@ -92,16 +92,16 @@ class CommandHandler {
      * @param json instructions on which IBoards to build.
      */
     private void build(String json) {
-        try {
-            robot = Robot.JsonToRobot(json);
-        } catch (Exception e){
-            e.printStackTrace();
-        }
-//        List<IBoard> ev3 = Arrays.asList(new MockBoard(), new MockBoard());
-//        List<IBoard> grovePi = Arrays.asList(new MockBoard(), new MockBoard());
-//        robot = new HashMap<>();
-//        robot.put(BoardTypeEnum.EV3, ev3);
-//        robot.put(BoardTypeEnum.GrovePi, grovePi);
+//        try {
+//            robot = Robot.JsonToRobot(json);
+//        } catch (Exception e){
+//            e.printStackTrace();
+//        }
+        Map<Integer, IBoard> ev3 = Map.of(1, new FakeBoard(), 2, new FakeBoard());
+        Map<Integer, IBoard> grovePi = Map.of(1, new FakeBoard(), 2, new FakeBoard());
+        robot = new HashMap<>();
+        robot.put(BoardTypeEnum.EV3, ev3);
+        robot.put(BoardTypeEnum.GrovePi, grovePi);
 
         if (dataCollectionFuture != null){
             dataCollectionFuture.cancel(true);
@@ -125,11 +125,11 @@ class CommandHandler {
             Map<BoardTypeEnum, Map<Integer, Map<IPortEnums, Double>>> activationMap = buildActivationMap(json);
 
             activationMap.forEach((boardName, indexesMap) -> {
-                ArrayList<IBoard> boardsList = new ArrayList<>(robot.get(boardName));
+                Map<Integer, IBoard> boardsMap = robot.get(boardName);
 
                 activationMap.get(boardName).forEach((index, portsMap) -> {
                     @SuppressWarnings("unchecked")
-                    IBoard<IPortEnums> board = boardsList.get(index - 1);
+                    IBoard<IPortEnums> board = boardsMap.get(index);
                     ArrayList<DriveDataObject> driveList = getDriveList(activationMap, boardName, index);
                     board.drive(driveList);
 
@@ -153,7 +153,6 @@ class CommandHandler {
      * @param json info on boards, ports and values to call 'rotate' on.
      */
     private void rotate(String json) {
-        System.out.println("in rotate");
         try {
             if (robot == null) {
                 return;
@@ -161,11 +160,11 @@ class CommandHandler {
             Map<BoardTypeEnum, Map<Integer, Map<IPortEnums, Double>>> activationMap = buildActivationMap(json);
 
             activationMap.forEach((boardName, indexesMap) -> {
-                ArrayList<IBoard> boardsList = new ArrayList<>(robot.get(boardName));
+                Map<Integer, IBoard> boardsMap = robot.get(boardName);
 
                 activationMap.get(boardName).forEach((index, portsMap) -> {
                     @SuppressWarnings("unchecked")
-                    IBoard<IPortEnums> board = boardsList.get(index - 1);
+                    IBoard<IPortEnums> board = boardsMap.get(index);
                     ArrayList<DriveDataObject> driveList = getDriveList(activationMap, boardName, index);
                     board.rotate(driveList);
 
@@ -188,7 +187,6 @@ class CommandHandler {
      * @param json info on boards, ports and values to call 'setSensorData' on.
      */
     private void setSensor(String json) {
-        System.out.println("In set sensor");
         try {
             if (robot == null) {
                 return;
@@ -196,16 +194,16 @@ class CommandHandler {
             Map<BoardTypeEnum, Map<Integer, Map<IPortEnums, Double>>> activationMap = buildActivationMap(json);
 
             activationMap.forEach((boardName, indexesMap) -> {
-                ArrayList<IBoard> boardsList = new ArrayList<>(robot.get(boardName));
+                Map<Integer, IBoard> boardsMap = robot.get(boardName);
 
                 activationMap.get(boardName).forEach((index, portsMap) -> {
                     @SuppressWarnings("unchecked")
-                    IBoard<IPortEnums> board = boardsList.get(index - 1);
+                    IBoard<IPortEnums> board = boardsMap.get(index - 1);
 
                     Map<IPortEnums, Double> sensorsDataMap = activationMap.get(boardName).get(index);
                     sensorsDataMap.forEach((port, sensorValue) -> board.setSensorData(port, sensorValue > 0));
                     sensorsDataMap.forEach((port, sensorValue) -> System.out.println("Sensor in port " + port + " was set to value " + (sensorValue > 0)));
-                   // System.out.println(robotSensorsData.getPortsAndValues("EV3", "_1").get("_2"));
+
                     try {
                         Thread.sleep(commandTimeout);
                     } catch (InterruptedException e) {
@@ -278,12 +276,21 @@ class CommandHandler {
         return result;
     }
 
+    // TODO 3 parameters are called on first line only. Why not pass speedMap instead?
     private ArrayList<DriveDataObject> getDriveList(Map<BoardTypeEnum, Map<Integer, Map<IPortEnums, Double>>> activationMap, BoardTypeEnum boardName, int index) {
         Map<IPortEnums, Double> speedMap = activationMap.get(boardName).get(index);
         ArrayList<DriveDataObject> driveList = new ArrayList<>();
         speedMap.forEach((port, speed) -> driveList.add(new DriveDataObject(port, speed, 180)));
         speedMap.forEach((a, b) -> System.out.println(a + " - " + b));
-        System.out.println(robotSensorsData.getPortsAndValues("EV3", "_1").get("_2"));
+
+        Map<String, Double> ev3 = robotSensorsData.getPortsAndValues("EV3", "_1");
+        if (ev3 != null){
+            System.out.println(ev3.get("_2"));
+        }
+        Map<String, Double> gp = robotSensorsData.getPortsAndValues("GrovePi", "_1");
+        if (gp != null){
+            System.out.println(gp.get("D4"));
+        }
         return driveList;
     }
 
@@ -306,8 +313,7 @@ class CommandHandler {
                     int index = Integer.parseInt(indexString.substring(1));
                     robotSensorsDataCopy.getPorts(boardString, indexString).forEach(portString -> {
                         IPortEnums port = board.getPortType(portString);
-                        Double data = robot.get(board).get(index - 1).getDoubleSensorData(port, 0);
-//                        System.out.println(data);
+                        Double data = robot.get(board).get(index).getDoubleSensorData(port, 0);
                         jsonPorts.addProperty(portString, data);
                     });
                     jsonIndexes.add(indexString, jsonPorts);
@@ -317,6 +323,12 @@ class CommandHandler {
             robotSensorsData.updateBoardMapValues(jsonBoards.toString());
         }   catch (Exception e){
             e.printStackTrace();
+//            robot.forEach((name, v) -> {
+//                System.out.println("name - ");
+//                v.forEach((i, b) -> {
+//                    System.out.println("    " + i + " - " + b.getClass().getName());
+//                });
+//            });
         }
     };
 
