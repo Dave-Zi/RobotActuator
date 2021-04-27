@@ -15,6 +15,14 @@ public class MainTest {
         RobotSensorsData robotSensorsData = new RobotSensorsData();
         commandHandler = new CommandHandler(robotSensorsData);
         ICommunication communicationHandler = new CommunicationHandler("Data", "Commands");
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            try {
+                communicationHandler.closeConnection();
+                System.out.println("Connection Closed!");
+            } catch (IOException | TimeoutException e) {
+                e.printStackTrace();
+            }
+        }));
         communicationHandler.setCallback(MainTest::onReceiveCallback);
 
 //        String json = "{\"EV3\": {1: {}, 2 : {\"B\": 32, \"C\": 31}}}";
