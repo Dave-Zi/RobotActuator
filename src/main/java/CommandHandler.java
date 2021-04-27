@@ -34,7 +34,7 @@ class CommandHandler {
     private ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
     private Future dataCollectionFuture;
 
-    private Map<String, ICommand> commandToMethod = Stream.of(new Object[][]{
+    Map<String, ICommand> commandToMethod = Stream.of(new Object[][]{
             {"\"Subscribe\"", subscribe},
             {"\"Unsubscribe\"", unsubscribe},
             {"\"Build\"", build},
@@ -44,7 +44,7 @@ class CommandHandler {
 
     }).collect(Collectors.toMap(data -> (String) data[0], data -> (ICommand) data[1]));
 
-    CommandHandler(RobotSensorsData robotSensorsData){
+    CommandHandler(RobotSensorsData robotSensorsData) {
         this.robotSensorsData = robotSensorsData;
     }
 
@@ -60,28 +60,29 @@ class CommandHandler {
 
     /**
      * Subscribe to new ports.
-     *
+     * <p>
      * 1. Stop data collection from ports
      * 2. Add new ports to Robot Sensor Data Object.
      * 3. Restart Data Collection Thread.
      *
      * @param json string from BPjs messages
      */
-    private void subscribe(String json){
+    private void subscribe(String json) {
         System.out.println("in subscribe!");
         robotSensorsData.addToBoardsMap(json);
         startExecutor();
     }
+
     /**
      * Unsubscribe from ports.
-     *
+     * <p>
      * 1. Stop data collection from ports
      * 2. Remove ports from Robot Sensor Data Object.
      * 3. Restart Data Collection Thread.
      *
      * @param json string from BPjs messages
      */
-    private void unsubscribe(String json){
+    private void unsubscribe(String json) {
         System.out.println("in unsubscribe!");
         robotSensorsData.removeFromBoardsMap(json);
         startExecutor();
@@ -89,12 +90,13 @@ class CommandHandler {
 
     /**
      * Build IBoards according to json data from BPjs Build event.
+     *
      * @param json instructions on which IBoards to build.
      */
     private void build(String json) {
         try {
             robot = Robot.JsonToRobot(json);
-        } catch (Exception e){
+        } catch (Exception e) {
             e.printStackTrace();
         }
 //        List<IBoard> ev3 = Arrays.asList(new MockBoard(), new MockBoard());
@@ -103,7 +105,7 @@ class CommandHandler {
 //        robot.put(BoardTypeEnum.EV3, ev3);
 //        robot.put(BoardTypeEnum.GrovePi, grovePi);
 
-        if (dataCollectionFuture != null){
+        if (dataCollectionFuture != null) {
             dataCollectionFuture.cancel(true);
         }
         robotSensorsData.clear();
@@ -113,13 +115,14 @@ class CommandHandler {
 
     /**
      * Call IBoard's 'drive' method according to json data
+     *
      * @param json info on boards, ports and values to call 'drive' on.
      */
-    private void drive(String json){
+    private void drive(String json) {
         System.out.println("In drive");
 
         try {
-            if (robot == null){
+            if (robot == null) {
                 return;
             }
             Map<BoardTypeEnum, Map<Integer, Map<IPortEnums, Double>>> activationMap = buildActivationMap(json);
@@ -176,7 +179,7 @@ class CommandHandler {
                     }
                 });
             });
-        } catch (Exception e){
+        } catch (Exception e) {
             e.printStackTrace();
         }
 
@@ -205,7 +208,7 @@ class CommandHandler {
                     Map<IPortEnums, Double> sensorsDataMap = activationMap.get(boardName).get(index);
                     sensorsDataMap.forEach((port, sensorValue) -> board.setSensorData(port, sensorValue > 0));
                     sensorsDataMap.forEach((port, sensorValue) -> System.out.println("Sensor in port " + port + " was set to value " + (sensorValue > 0)));
-                   // System.out.println(robotSensorsData.getPortsAndValues("EV3", "_1").get("_2"));
+                    // System.out.println(robotSensorsData.getPortsAndValues("EV3", "_1").get("_2"));
                     try {
                         Thread.sleep(commandTimeout);
                     } catch (InterruptedException e) {
@@ -222,21 +225,22 @@ class CommandHandler {
     /**
      * Build Map of Board Types -> IBoard Index -> Port and it's speed value.
      * This map is used to call 'drive' on each IBoard that is indexed on the result
+     *
      * @param json build map according to this json
      * @return Map with boards, their indexes, and the data to call 'drive' on.
      */
-    private Map<BoardTypeEnum, Map<Integer, Map<IPortEnums, Double>>> buildActivationMap(String json){
+    private Map<BoardTypeEnum, Map<Integer, Map<IPortEnums, Double>>> buildActivationMap(String json) {
         Map<BoardTypeEnum, Map<Integer, Map<IPortEnums, Double>>> result = new HashMap<>();
         Gson gson = new Gson();
         Map element = gson.fromJson(json, Map.class); // json String to Map
 
-        for (Object key: element.keySet()){ // Iterate over board types
+        for (Object key : element.keySet()) { // Iterate over board types
             BoardTypeEnum keyAsBoard = BoardTypeEnum.valueOf((String) key);
             result.put(keyAsBoard, new HashMap<>()); // Add board enum to map
             Object indexesMap = element.get(key);
 
             @SuppressWarnings("unchecked")
-            Map<String, Object> valueMapped = (Map<String, Object>)indexesMap; // Map of boards to ports list
+            Map<String, Object> valueMapped = (Map<String, Object>) indexesMap; // Map of boards to ports list
 
             // Check if board contains map of board indexes to map of ports and values
             // or if the map is immediately ports and values.
@@ -246,12 +250,12 @@ class CommandHandler {
             // If its a map, then we have board indexing, else we have port and values.
 
             Optional anyValue = valueMapped.values().stream().findFirst();
-            if (!anyValue.isPresent()){
+            if (!anyValue.isPresent()) {
                 continue;
             }
 
             // Check if board indexes exist
-            if (anyValue.get() instanceof LinkedTreeMap){
+            if (anyValue.get() instanceof LinkedTreeMap) {
                 // We know the rest of the structure from here
                 @SuppressWarnings("unchecked")
                 Map<String, Map<String, Double>> boardIndexes = (Map<String, Map<String, Double>>) indexesMap; // Map of boards to ports list
@@ -265,7 +269,7 @@ class CommandHandler {
 
                 });
 
-            } else if (anyValue.get() instanceof Double){
+            } else if (anyValue.get() instanceof Double) {
                 @SuppressWarnings("unchecked")
                 Map<String, Double> boardPorts = (Map<String, Double>) indexesMap; // Map of boards to ports list
                 Map<IPortEnums, Double> portsResult = new HashMap<>();
@@ -298,7 +302,7 @@ class CommandHandler {
             RobotSensorsData robotSensorsDataCopy = robotSensorsData.clone();
 
             JsonObject jsonBoards = new JsonObject();
-            robotSensorsDataCopy.getBoardNames().forEach(boardString ->{
+            robotSensorsDataCopy.getBoardNames().forEach(boardString -> {
                 JsonObject jsonIndexes = new JsonObject();
                 BoardTypeEnum board = BoardTypeEnum.valueOf(boardString);
                 robotSensorsDataCopy.getBoardIndexes(boardString).forEach(indexString -> {
@@ -315,19 +319,19 @@ class CommandHandler {
                 jsonBoards.add(boardString, jsonIndexes);
             });
             robotSensorsData.updateBoardMapValues(jsonBoards.toString());
-        }   catch (Exception e){
+        } catch (Exception e) {
             e.printStackTrace();
         }
     };
 
-    private void startExecutor(){
-        if (dataCollectionFuture != null){
+    private void startExecutor() {
+        if (dataCollectionFuture != null) {
             dataCollectionFuture.cancel(true);
         }
 
         try {
             dataCollectionFuture = executor.scheduleWithFixedDelay(dataCollector, 0L, 100L, TimeUnit.MILLISECONDS);
-        } catch (Exception e){
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
@@ -338,5 +342,21 @@ class CommandHandler {
     @FunctionalInterface
     public interface ICommand {
         void executeCommand(String json) throws IOException;
+    }
+
+    RobotSensorsData getRobotSensorsData() {
+        return robotSensorsData;
+    }
+
+    void setRobotSensorsData(RobotSensorsData robotSensorsData) {
+        this.robotSensorsData = robotSensorsData;
+    }
+
+    HashMap<BoardTypeEnum, List<IBoard>> getRobot() {
+        return robot;
+    }
+
+    public void setRobot(HashMap<BoardTypeEnum, List<IBoard>> robot) {
+        this.robot = robot;
     }
 }
