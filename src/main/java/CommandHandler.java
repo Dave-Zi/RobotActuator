@@ -33,7 +33,7 @@ class CommandHandler {
     private ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
     private Future dataCollectionFuture;
 
-    Map<String, ICommand> commandToMethod = Stream.of(new Object[][]{
+    private Map<String, ICommand> commandToMethod = Stream.of(new Object[][]{
             {"\"Subscribe\"", subscribe},
             {"\"Unsubscribe\"", unsubscribe},
             {"\"Build\"", build},
@@ -164,9 +164,11 @@ class CommandHandler {
                 activationMap.get(boardName).forEach((index, portsMap) -> {
                     @SuppressWarnings("unchecked")
                     IBoard<IPortEnums> board = boardsMap.get(index);
-                    Map<IPortEnums, Double> speedMap = activationMap.get(boardName).get(index).getKey();
-                    Double speed = activationMap.get(boardName).get(index).getValue();
-                    ArrayList<DriveDataObject> driveList = getDriveList(speedMap, speed);
+
+                    ArrayList<DriveDataObject> driveList = getDriveList(
+                            activationMap.get(boardName).get(index).getKey(),
+                            activationMap.get(boardName).get(index).getValue());
+
                     board.drive(driveList);
 
                     try {
@@ -202,9 +204,9 @@ class CommandHandler {
                 activationMap.get(boardName).forEach((index, portsMap) -> {
                     @SuppressWarnings("unchecked")
                     IBoard<IPortEnums> board = boardsMap.get(index);
-                    Map<IPortEnums, Double> speedMap = activationMap.get(boardName).get(index).getKey();
-                    Double speed = activationMap.get(boardName).get(index).getValue();
-                    ArrayList<DriveDataObject> driveList = getDriveList(speedMap, speed);
+                    ArrayList<DriveDataObject> driveList = getDriveList(
+                            activationMap.get(boardName).get(index).getKey(),
+                            activationMap.get(boardName).get(index).getValue());
                     board.rotate(driveList);
 
                     try {
@@ -378,6 +380,7 @@ class CommandHandler {
                     int index = Integer.parseInt(indexString.substring(1));
                     robotSensorsDataCopy.getPorts(boardString, indexString).forEach(portString -> {
                         IPortEnums port = board.getPortType(portString);
+                        @SuppressWarnings("unchecked")
                         Double data = robot.get(board).get(index).getDoubleSensorData(port, 0);
                         jsonPorts.addProperty(portString, data);
                     });
@@ -415,21 +418,5 @@ class CommandHandler {
     @FunctionalInterface
     public interface ICommand {
         void executeCommand(String json) throws IOException;
-    }
-
-    RobotSensorsData getRobotSensorsData() {
-        return robotSensorsData;
-    }
-
-    void setRobotSensorsData(RobotSensorsData robotSensorsData) {
-        this.robotSensorsData = robotSensorsData;
-    }
-
-    Map<BoardTypeEnum, Map<Integer, IBoard>> getRobot() {
-        return robot;
-    }
-
-    public void setRobot(Map<BoardTypeEnum, Map<Integer, IBoard>> robot) {
-        this.robot = robot;
     }
 }
