@@ -3,11 +3,13 @@ import Enums.IPortEnums;
 import RobotData.RobotSensorsData;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import com.google.gson.internal.LinkedTreeMap;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
@@ -49,13 +51,45 @@ class CommandHandler {
     }
 
     // Parse & execute command from message that arrived from BPjs
-    void parseAndExecuteCommand(String message) throws IOException {
-        JsonObject obj = new JsonParser().parse(message).getAsJsonObject();
-        String command = String.valueOf(obj.get("Command"));
-        String dataJsonString = String.valueOf(obj.get("Data"));
+    void executeCommand(String command, String dataJsonString) throws IOException {
 
         ICommand commandToExecute = commandToMethod.get(command);
         commandToExecute.executeCommand(dataJsonString);
+    }
+
+    String executeAlgorithm(String jsonData){
+        if (robot == null) {
+            return "";
+        }
+        String jsonResult = "";
+        Gson gson = new Gson();
+        Map element = gson.fromJson(jsonData, Map.class); // json String to Map
+
+        for (Object key: element.keySet()) { // Iterate over board types
+            BoardTypeEnum keyAsBoard = BoardTypeEnum.valueOf((String) key);
+
+            Object indexesMap = element.get(key);
+
+            @SuppressWarnings("unchecked")
+            Map<String, Object> boardIndexes = (Map<String, Object>) indexesMap; // Map of board indexes to ports list
+
+            for (Map.Entry<String, Object> indexesToParams : boardIndexes.entrySet()) {
+                String index = indexesToParams.getKey();
+                Object algorithmParams = indexesToParams.getValue();
+                Integer boardIndexAsInt = Integer.parseInt(index);
+                String jsonParams = gson.toJson(algorithmParams);
+                jsonResult = robot.get(keyAsBoard).get(boardIndexAsInt).myAlgorithm(jsonParams);
+            }
+        }
+        return jsonResult;
+    }
+
+    void closeBoards(){
+        if (robot == null){
+            return;
+        }
+
+        robot.forEach((boardName, boards) -> boards.forEach((index, board) -> board.disconnect()));
     }
 
     /**
@@ -97,8 +131,8 @@ class CommandHandler {
 //        } catch (Exception e){
 //            e.printStackTrace();
 //        }
-        Map<Integer, IBoard> ev3 = Map.of(1, new FakeBoard(), 2, new FakeBoard());
-        Map<Integer, IBoard> grovePi = Map.of(1, new FakeBoard(), 2, new FakeBoard());
+        Map<Integer, IBoard> ev3 = Map.of(1, new MockBoard(), 2, new MockBoard());
+        Map<Integer, IBoard> grovePi = Map.of(1, new MockBoard(), 2, new MockBoard());
         robot = new HashMap<>();
         robot.put(BoardTypeEnum.EV3, ev3);
         robot.put(BoardTypeEnum.GrovePi, grovePi);
@@ -214,7 +248,6 @@ class CommandHandler {
         } catch (Exception e) {
             e.printStackTrace();
         }
-
     }
 
     /**
