@@ -1,6 +1,10 @@
 import Communication.CommunicationHandler;
 import Communication.ICommunication;
+import Communication.QueueNameEnum;
 import RobotData.RobotSensorsData;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+import com.rabbitmq.client.AlreadyClosedException;
 import com.rabbitmq.client.Delivery;
 
 import java.io.IOException;
@@ -10,33 +14,33 @@ import java.util.concurrent.TimeoutException;
 public class MainTest {
 
     private static CommandHandler commandHandler;
+    private static ICommunication communicationHandler;
+    private static RobotSensorsData robotSensorsData;
 
     public static void main(String[] args) throws IOException, TimeoutException {
-        RobotSensorsData robotSensorsData = new RobotSensorsData();
+        robotSensorsData = new RobotSensorsData();
         commandHandler = new CommandHandler(robotSensorsData);
-        ICommunication communicationHandler = new CommunicationHandler("Data", "Commands");
+        communicationHandler = new CommunicationHandler();
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             try {
                 communicationHandler.closeConnection();
-                System.out.println("Connection Closed!");
-            } catch (IOException | TimeoutException e) {
-                e.printStackTrace();
-            }
+                commandHandler.closeBoards();
+            } catch (IOException | TimeoutException | AlreadyClosedException ignore) { }
+            System.out.println("Connection Closed!");
+
         }));
-        communicationHandler.setCallback(MainTest::onReceiveCallback);
 
 //        String json = "{\"EV3\": {1: {}, 2 : {\"B\": 32, \"C\": 31}}}";
 //        commandHandler.getCommand("\"Drive\"").executeCommand(json);
-        communicationHandler.openSendQueue(true, false);
-        communicationHandler.openReceiveQueue(false, true);
 
-        while (true){
+        // Sending on Data and Free.
+        // Listening on Commands and SOS.
+        communicationHandler.purgeQueue(QueueNameEnum.Data);
+        communicationHandler.purgeQueue(QueueNameEnum.Free);
+        communicationHandler.consumeFromQueue(QueueNameEnum.Commands, MainTest::onReceiveCallback);
+        communicationHandler.consumeFromQueue(QueueNameEnum.SOS, MainTest::onReceiveCallback);
 
-            if (robotSensorsData.isUpdated()) {
-                String json = robotSensorsData.toJson();
-                communicationHandler.send(json, false);
-            }
-        }
+        while (true){ }
     }
 
     private static void onReceiveCallback(String consumerTag, Delivery delivery) throws IOException {
@@ -44,7 +48,22 @@ public class MainTest {
         String message = new String(delivery.getBody(), StandardCharsets.UTF_8);
 //        System.out.println(" [x] Received '" + message + "'");
 //        System.out.println("Msg no. " + delivery.getProperties().getMessageId());
-        commandHandler.parseAndExecuteCommand(message);
+        JsonObject obj = new JsonParser().parse(message).getAsJsonObject();
+        String command = String.valueOf(obj.get("Command"));
+        String dataJsonString = String.valueOf(obj.get("Data"));
+
+        if (command.equals("\"MyAlgorithm\"")){
+            String result = commandHandler.executeAlgorithm(dataJsonString);
+            communicationHandler.send(result, QueueNameEnum.Free);
+
+        } else {
+            commandHandler.executeCommand(command, dataJsonString);
+            if (robotSensorsData.isUpdated()) {
+                String json = robotSensorsData.toJson();
+                communicationHandler.send(json, QueueNameEnum.Data);
+            }
+        }
+
     }
 
 }
