@@ -15,12 +15,13 @@ public class MainTest {
 
     private static CommandHandler commandHandler;
     private static ICommunication communicationHandler;
-    private static RobotSensorsData robotSensorsData;
 
+    @SuppressWarnings("InfiniteLoopStatement")
     public static void main(String[] args) throws IOException, TimeoutException {
-        robotSensorsData = new RobotSensorsData();
+        RobotSensorsData robotSensorsData = new RobotSensorsData();
         commandHandler = new CommandHandler(robotSensorsData);
         communicationHandler = new CommunicationHandler();
+        communicationHandler.connect();
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             try {
                 communicationHandler.closeConnection();
@@ -40,14 +41,17 @@ public class MainTest {
         communicationHandler.consumeFromQueue(QueueNameEnum.Commands, MainTest::onReceiveCallback);
         communicationHandler.consumeFromQueue(QueueNameEnum.SOS, MainTest::onReceiveCallback);
 
-        while (true){ }
+        while (true){
+            if (robotSensorsData.isUpdated()) {
+                String json = robotSensorsData.toJson();
+                communicationHandler.send(json, QueueNameEnum.Data);
+            }
+        }
     }
 
     private static void onReceiveCallback(String consumerTag, Delivery delivery) throws IOException {
 
         String message = new String(delivery.getBody(), StandardCharsets.UTF_8);
-//        System.out.println(" [x] Received '" + message + "'");
-//        System.out.println("Msg no. " + delivery.getProperties().getMessageId());
         JsonObject obj = new JsonParser().parse(message).getAsJsonObject();
         String command = String.valueOf(obj.get("Command"));
         String dataJsonString = String.valueOf(obj.get("Data"));
@@ -58,10 +62,6 @@ public class MainTest {
 
         } else {
             commandHandler.executeCommand(command, dataJsonString);
-            if (robotSensorsData.isUpdated()) {
-                String json = robotSensorsData.toJson();
-                communicationHandler.send(json, QueueNameEnum.Data);
-            }
         }
 
     }
