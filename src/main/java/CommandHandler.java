@@ -29,7 +29,8 @@ class CommandHandler {
     private final ICommand build = this::build;
     private final ICommand drive = this::drive;
     private final ICommand rotate = this::rotate;
-    private final ICommand setSensor = this::setSensor;
+    private final ICommand setSensorMode = this::setSensorMode;
+    private final ICommand setActuatorData = this::setActuatorData;
 
 
     // Thread for data collection from robot sensors
@@ -42,7 +43,8 @@ class CommandHandler {
             {"\"Build\"", build},
             {"\"Drive\"", drive},
             {"\"Rotate\"", rotate},
-            {"\"SetSensor\"", setSensor}
+            {"\"SetSensorMode\"", setSensorMode},
+            {"\"setActuatorData\"", setActuatorData}
 
     }).collect(Collectors.toMap(data -> (String) data[0], data -> (ICommand) data[1]));
 
@@ -152,7 +154,6 @@ class CommandHandler {
      *
      * @param json info on boards, ports and values to call 'drive' on.
      */
-    @SuppressWarnings("unchecked")
     private void drive(String json) {
         System.out.println("In drive");
 
@@ -193,7 +194,6 @@ class CommandHandler {
      *
      * @param json info on boards, ports and values to call 'rotate' on.
      */
-    @SuppressWarnings("unchecked")
     private void rotate(String json) {
         System.out.println("in rotate");
         try {
@@ -232,7 +232,7 @@ class CommandHandler {
      * @param json info on boards, ports and values to call 'setSensorData' on.
      */
     @SuppressWarnings("unchecked")
-    private void setSensor(String json) {
+    private void setSensorMode(String json) {
         System.out.println("In set sensor");
         try {
             if (robot == null) {
@@ -246,7 +246,7 @@ class CommandHandler {
                 activationMap.get(boardName).forEach((index, portsMap) -> {
                     IBoard board = boardsMap.get(index);
                     Map<IPortEnums, Double> sensorsDataMap = activationMap.get(boardName).get(index).getKey();
-                    sensorsDataMap.forEach((port, sensorValue) -> board.setSensorData(port, sensorValue > 0));
+                    sensorsDataMap.forEach((port, sensorValue) -> board.setSensorMode(port, sensorValue > 0));
                     sensorsDataMap.forEach((port, sensorValue) -> System.out.println("Sensor in port " + port + " was set to value " + (sensorValue > 0)));
 
                     try {
@@ -261,6 +261,35 @@ class CommandHandler {
         }
     }
 
+    @SuppressWarnings("unchecked")
+    private void setActuatorData(String json) {
+        System.out.println("In set actuator");
+        try {
+            if (robot == null) {
+                return;
+            }
+            Map<BoardTypeEnum, Map<Integer, Map.Entry<Map<IPortEnums, Double>, Double>>> activationMap = buildActivationMap(json);
+
+            activationMap.forEach((boardName, indexesMap) -> {
+                Map<Integer, IBoard> boardsMap = robot.get(boardName);
+
+                activationMap.get(boardName).forEach((index, portsMap) -> {
+                    IBoard board = boardsMap.get(index);
+                    Map<IPortEnums, Double> sensorsDataMap = activationMap.get(boardName).get(index).getKey();
+                    sensorsDataMap.forEach((port, sensorValue) -> board.setActuatorData(port, sensorValue > 0));
+                    sensorsDataMap.forEach((port, sensorValue) -> System.out.println("Sensor in port " + port + " was set to value " + (sensorValue > 0)));
+
+                    try {
+                        Thread.sleep(commandTimeout);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                });
+            });
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
     /**
      * Build Map of Board Types -> IBoard Index -> Port and it's speed value.
      * This map is used to call 'drive' on each IBoard that is indexed on the result
