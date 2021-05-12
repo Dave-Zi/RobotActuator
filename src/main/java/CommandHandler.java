@@ -374,11 +374,11 @@ class CommandHandler {
 
         Map<String, Double> ev3 = robotSensorsData.getPortsAndValues("EV3", "_1");
         if (ev3 != null) {
-//            System.out.println(ev3.get("_2"));
+            System.out.println(ev3.get("_2"));
         }
         Map<String, Double> gp = robotSensorsData.getPortsAndValues("GrovePi", "_1");
         if (gp != null) {
-//            System.out.println(gp.get("D4"));
+            System.out.println(gp.get("D4"));
         }
         return driveList;
     }
