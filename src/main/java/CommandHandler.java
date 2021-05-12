@@ -20,6 +20,8 @@ import java.util.stream.Stream;
 class CommandHandler {
 
     private RobotSensorsData robotSensorsData;
+
+
     private Map<BoardTypeEnum, Map<Integer, IBoard>> robot;
     private final int commandTimeout = 100;
 
@@ -104,7 +106,7 @@ class CommandHandler {
      * @param json string from BPjs messages
      */
     private void subscribe(String json) {
-        System.out.println("in subscribe!");
+        // System.out.println("in subscribe!");
         robotSensorsData.addToBoardsMap(json);
         startExecutor();
     }
@@ -119,7 +121,7 @@ class CommandHandler {
      * @param json string from BPjs messages
      */
     private void unsubscribe(String json) {
-        System.out.println("in unsubscribe!");
+        //  System.out.println("in unsubscribe!");
         robotSensorsData.removeFromBoardsMap(json);
         startExecutor();
     }
@@ -129,24 +131,12 @@ class CommandHandler {
      *
      * @param json instructions on which IBoards to build.
      */
-    private void build(String json) {
-        try {
-            robot = Robot.JsonToRobot(json);
-        } catch (Exception e){
-            e.printStackTrace();
-        }
-//        Map<Integer, IBoard> ev3 = Map.of(1, new MockBoard(), 2, new MockBoard());
-//        Map<Integer, IBoard> grovePi = Map.of(1, new MockBoard(), 2, new MockBoard());
-//        robot = new HashMap<>();
-//        robot.put(BoardTypeEnum.EV3, ev3);
-//        robot.put(BoardTypeEnum.GrovePi, grovePi);
-
-        if (dataCollectionFuture != null) {
-            dataCollectionFuture.cancel(true);
-        }
-        robotSensorsData.clear();
-        System.out.println("building success!");
-
+    void build(String json) {
+//        try {
+        //   robot = Robot.JsonToRobot(json);
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//        }
     }
 
     /**
@@ -155,7 +145,7 @@ class CommandHandler {
      * @param json info on boards, ports and values to call 'drive' on.
      */
     private void drive(String json) {
-        System.out.println("In drive");
+        //     System.out.println("In drive");
 
         try {
             if (robot == null) {
@@ -195,7 +185,7 @@ class CommandHandler {
      * @param json info on boards, ports and values to call 'rotate' on.
      */
     private void rotate(String json) {
-        System.out.println("in rotate");
+        //       System.out.println("in rotate");
         try {
             if (robot == null) {
                 return;
@@ -233,7 +223,7 @@ class CommandHandler {
      */
     @SuppressWarnings("unchecked")
     private void setSensorMode(String json) {
-        System.out.println("In set sensor");
+        //     System.out.println("In set sensor");
         try {
             if (robot == null) {
                 return;
@@ -247,7 +237,7 @@ class CommandHandler {
                     IBoard board = boardsMap.get(index);
                     Map<IPortEnums, Double> sensorsDataMap = activationMap.get(boardName).get(index).getKey();
                     sensorsDataMap.forEach((port, sensorValue) -> board.setSensorMode(port, sensorValue > 0));
-                    sensorsDataMap.forEach((port, sensorValue) -> System.out.println("Sensor in port " + port + " was set to value " + (sensorValue > 0)));
+                    //     sensorsDataMap.forEach((port, sensorValue) -> System.out.println("Sensor in port " + port + " was set to value " + (sensorValue > 0)));
 
                     try {
                         Thread.sleep(commandTimeout);
@@ -263,7 +253,7 @@ class CommandHandler {
 
     @SuppressWarnings("unchecked")
     private void setActuatorData(String json) {
-        System.out.println("In set actuator");
+        //     System.out.println("In set actuator");
         try {
             if (robot == null) {
                 return;
@@ -277,7 +267,7 @@ class CommandHandler {
                     IBoard board = boardsMap.get(index);
                     Map<IPortEnums, Double> sensorsDataMap = activationMap.get(boardName).get(index).getKey();
                     sensorsDataMap.forEach((port, sensorValue) -> board.setActuatorData(port, sensorValue > 0));
-                    sensorsDataMap.forEach((port, sensorValue) -> System.out.println("Sensor in port " + port + " was set to value " + (sensorValue > 0)));
+                    //        sensorsDataMap.forEach((port, sensorValue) -> System.out.println("Sensor in port " + port + " was set to value " + (sensorValue > 0)));
 
                     try {
                         Thread.sleep(commandTimeout);
@@ -290,6 +280,7 @@ class CommandHandler {
             e.printStackTrace();
         }
     }
+
     /**
      * Build Map of Board Types -> IBoard Index -> Port and it's speed value.
      * This map is used to call 'drive' on each IBoard that is indexed on the result
@@ -383,11 +374,11 @@ class CommandHandler {
 
         Map<String, Double> ev3 = robotSensorsData.getPortsAndValues("EV3", "_1");
         if (ev3 != null) {
-            System.out.println(ev3.get("_2"));
+//            System.out.println(ev3.get("_2"));
         }
         Map<String, Double> gp = robotSensorsData.getPortsAndValues("GrovePi", "_1");
         if (gp != null) {
-            System.out.println(gp.get("D4"));
+//            System.out.println(gp.get("D4"));
         }
         return driveList;
     }
@@ -435,6 +426,18 @@ class CommandHandler {
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    RobotSensorsData getRobotSensorsData() {
+        return robotSensorsData;
+    }
+
+    public Map<BoardTypeEnum, Map<Integer, IBoard>> getRobot() {
+        return robot;
+    }
+
+    void setRobot(Map<BoardTypeEnum, Map<Integer, IBoard>> robot) {
+        this.robot = robot;
     }
 
     /**
