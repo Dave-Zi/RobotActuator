@@ -132,11 +132,23 @@ class CommandHandler {
      * @param json instructions on which IBoards to build.
      */
     void build(String json) {
-//        try {
-        //   robot = Robot.JsonToRobot(json);
-//        } catch (Exception e) {
-//            e.printStackTrace();
-//        }
+        try {
+            robot = Robot.JsonToRobot(json);
+        } catch (Exception e){
+            e.printStackTrace();
+        }
+//        Map<Integer, IBoard> ev3 = Map.of(1, new MockBoard(), 2, new MockBoard());
+//        Map<Integer, IBoard> grovePi = Map.of(1, new MockBoard(), 2, new MockBoard());
+//        robot = new HashMap<>();
+//        robot.put(BoardTypeEnum.EV3, ev3);
+//        robot.put(BoardTypeEnum.GrovePi, grovePi);
+
+        if (dataCollectionFuture != null) {
+            dataCollectionFuture.cancel(true);
+        }
+        robotSensorsData.clear();
+        System.out.println("building success!");
+
     }
 
     /**
