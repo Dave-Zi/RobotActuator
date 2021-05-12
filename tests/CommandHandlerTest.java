@@ -1,12 +1,11 @@
-import Enums.BoardTypeEnum;
+import Boards.IBoard;
+import Boards.TestBoard;
+import Enums.*;
 import RobotData.RobotSensorsData;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 
 import java.io.IOException;
 import java.util.HashMap;
-import java.util.List;
+import java.util.Map;
 
 import static junit.framework.TestCase.assertTrue;
 import static org.junit.Assert.assertEquals;
@@ -14,47 +13,40 @@ import static org.junit.Assert.assertFalse;
 
 public class CommandHandlerTest {
 
-    private HashMap<BoardTypeEnum, List<IBoard>> robot;
-    private CommandHandler commandHandler;
-    private CommandHandler emptyCommandHandler;
 
-    private final String dataWithIndex = "{\"EV3\": {\"1\": [\"2\"],\"2\": [\"3\"]},\"GrovePi\": [\"D3\"]}";
-    private final String dataWithoutIndex = "{\"EV3\": [\"2\"]}";
-    private final String robotJson = "{\"EV3\":[{\"Port\": \"rfcomm0\"}],\"GrovePi\":[{\"A0\": \"\",\"A1\": \"\",\"A2\":\"\",\"D2\": \"Led\",\"D3\": \"\",\"D4\": \"Ultrasonic\",\"D5\": \"\",\"D6\": \"\",\"D7\": \"\",\"D8\": \"Led\"}]}";
-    private final String driveJson = "{\"EV3\": {\"B\": 10, \"C\": 10}}";
-    private final JsonElement jsonElement = new JsonParser().parse(robotJson);
-    private JsonObject jsonObject = new JsonObject();
-    private final String dataForDrive = "{\"EV3\": [\"B\"]}";
-    private final String driveJsonNoIndex = "{\"EV3\": {\"B\": 10}}";
-    private final String rotateJsonNoIndex = "{\"EV3\": {\"B\": 90, \"speed\": 10}}";
+    private TestCommandHandler emptyCommandHandler;
+    private TestCommandHandler commandHandler;
 
-    private final String setSensorJsonNoIndex = "{\"EV3\": {\"B\": 1.0}}";
-
+    private RobotSensorsData robotSensorsData;
 
     @org.junit.Before
-    public void setUp() {
-        RobotSensorsData robotSensorsData = new RobotSensorsData();
-        robotSensorsData.addToBoardsMap(dataWithIndex);
-        robotSensorsData.addToBoardsMap(dataWithoutIndex);
-        commandHandler = new CommandHandler(robotSensorsData);
+    public void setUp() throws IOException {
 
-        jsonObject.addProperty("json", robotJson);
+        robotSensorsData = new RobotSensorsData();
+        String boardsMapData = "{\"EV3\": {\"1\": [\"A\"],\"2\": [\"2\"]},\"GrovePi\": [\"D2\"]}";
+        robotSensorsData.addToBoardsMap(boardsMapData);
+        commandHandler = new TestCommandHandler(robotSensorsData);
+        String robotJson = "{\"EV3\":[{\"Port\": \"rfcomm0\"}],\"GrovePi\":[{\"A0\": \"\",\"A1\": \"\",\"A2\":\"\",\"D2\": \"Led\",\"D3\": \"\",\"D4\": \"Ultrasonic\",\"D5\": \"\",\"D6\": \"\",\"D7\": \"\",\"D8\": \"Led\"}]}";
+        commandHandler.executeCommand("\"Build\"", robotJson);
 
-        RobotSensorsData emptyRobotSensorsData = new RobotSensorsData();
-        emptyCommandHandler = new CommandHandler(emptyRobotSensorsData);
+        emptyCommandHandler = new TestCommandHandler(new RobotSensorsData());
+        emptyCommandHandler.executeCommand("\"Build\"", robotJson);
     }
 
     @org.junit.After
     public void tearDown() {
-        commandHandler.setRobotSensorsData(new RobotSensorsData());
+        commandHandler = new TestCommandHandler(new RobotSensorsData());
+        emptyCommandHandler = new TestCommandHandler(new RobotSensorsData());
+        robotSensorsData.clear();
     }
 
     // ------------- Subscribe -------------
     @org.junit.Test
     public void subscribeWithoutIndexTest() {
         try {
-            emptyCommandHandler.executeCommand("\"Subscribe\"", dataWithoutIndex);
-            assertTrue(emptyCommandHandler.getRobotSensorsData().getPorts("EV3", "_1").contains("_2"));
+            String DataToSubscribe = "{\"EV3\": [\"1\"]}";
+            emptyCommandHandler.executeCommand("\"Subscribe\"", DataToSubscribe);
+            assertTrue(emptyCommandHandler.getRobotSensorsData().getPorts("EV3", "_1").contains("_1"));
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -64,12 +56,11 @@ public class CommandHandlerTest {
     @org.junit.Test
     public void subscribeWithIndexTest() {
         try {
-            emptyCommandHandler.executeCommand("\"Subscribe\"", dataWithIndex);
-            assertTrue(emptyCommandHandler.getRobotSensorsData().getPorts("EV3", "_1").contains("_2"));
+            String dataToSubscribe = "{\"EV3\": {\"1\": [\"C\"],\"2\": [\"3\"]},\"GrovePi\": [\"D3\"]}";
+            emptyCommandHandler.executeCommand("\"Subscribe\"", dataToSubscribe);
+            assertTrue(emptyCommandHandler.getRobotSensorsData().getPorts("EV3", "_1").contains("C"));
             assertTrue(emptyCommandHandler.getRobotSensorsData().getPorts("EV3", "_2").contains("_3"));
             assertTrue(emptyCommandHandler.getRobotSensorsData().getPorts("GrovePi", "_1").contains("D3"));
-
-
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -80,43 +71,36 @@ public class CommandHandlerTest {
 
     @org.junit.Test
     public void unsubscribeWithIndexTest() {
-        assertTrue(commandHandler.getRobotSensorsData().getPorts("EV3", "_1").contains("_2"));
-        assertTrue(commandHandler.getRobotSensorsData().getPorts("EV3", "_2").contains("_3"));
-        assertTrue(commandHandler.getRobotSensorsData().getPorts("GrovePi", "_1").contains("D3"));
-
+        String dataToUnsubscribe = "{\"EV3\": {\"2\": [\"2\"]},\"GrovePi\": [\"D2\"]}";
+        assertTrue(commandHandler.getRobotSensorsData().getPorts("EV3", "_1").contains("A"));
+        assertTrue(commandHandler.getRobotSensorsData().getPorts("EV3", "_2").contains("_2"));
+        assertTrue(commandHandler.getRobotSensorsData().getPorts("GrovePi", "_1").contains("D2"));
         try {
-            commandHandler.executeCommand("\"Unsubscribe\"", dataWithIndex);
-            assertFalse(commandHandler.getRobotSensorsData().getPorts("EV3", "_1").contains("_2"));
-            assertFalse(commandHandler.getRobotSensorsData().getPorts("EV3", "_2").contains("_3"));
-            assertFalse(commandHandler.getRobotSensorsData().getPorts("GrovePi", "_1").contains("D3"));
+            commandHandler.executeCommand("\"Unsubscribe\"", dataToUnsubscribe);
+            assertFalse(commandHandler.getRobotSensorsData().getPorts("EV3", "_2").contains("_2"));
+            assertFalse(commandHandler.getRobotSensorsData().getPorts("GrovePi", "_1").contains("D2"));
         } catch (IOException e) {
             e.printStackTrace();
         }
-
     }
 
     @org.junit.Test
     public void unsubscribeWithoutIndexTest() throws IOException {
-        assertTrue(commandHandler.getRobotSensorsData().getPorts("EV3", "_1").contains("_2"));
-        commandHandler.commandToMethod.get("\"Unsubscribe\"").executeCommand(dataWithoutIndex);
-        assertFalse(commandHandler.getRobotSensorsData().getPorts("EV3", "_1").contains("_2"));
-    }
 
-
-    // -------------------- Build -----------------
-    @org.junit.Test
-    public void buildTest() throws IOException {
-//        commandHandler.commandToMethod.get("\"Build\"").executeCommand(robotJson);
-      //  robot = commandHandler.getRobot();
-        // TODO equal between the maps
+        String dataToUnsubscribe = "{\"EV3\": [\"A\"]}";
+        assertTrue(commandHandler.getRobotSensorsData().getPorts("EV3", "_1").contains("A"));
+        commandHandler.executeCommand("\"Unsubscribe\"", dataToUnsubscribe);
+        assertFalse(commandHandler.getRobotSensorsData().getPorts("EV3", "_1").contains("A"));
     }
 
     // -------------------- Drive -----------------
     @org.junit.Test
     public void driveTest() throws IOException {
-        emptyCommandHandler.executeCommand("\"Build\"",robotJson);
+
+        String dataForDrive = "{\"EV3\": {\"1\": [\"B\"]}}";
         emptyCommandHandler.executeCommand("\"Subscribe\"", dataForDrive);
-        emptyCommandHandler.executeCommand("\"Drive\"",driveJsonNoIndex);
+        String sensorsToDrive = "{\"EV3\": {\"B\": 10}}";
+        emptyCommandHandler.executeCommand("\"Drive\"", sensorsToDrive);
         RobotSensorsData _robotSensorsData = emptyCommandHandler.getRobotSensorsData();
 
         HashMap<String, Double> portsAndValues = new HashMap<>(_robotSensorsData.getPortsAndValues("EV3", "_1"));
@@ -126,9 +110,11 @@ public class CommandHandlerTest {
     // -------------------- Rotate -----------------
     @org.junit.Test
     public void rotateTest() throws IOException {
-        emptyCommandHandler.executeCommand("\"Build\"",robotJson);
-        emptyCommandHandler.executeCommand("\"Subscribe\"", dataForDrive);
-        emptyCommandHandler.executeCommand("\"Rotate\"",rotateJsonNoIndex);
+
+        String dataForRotate = "{\"EV3\": {\"1\": [\"B\"]}}";
+        emptyCommandHandler.executeCommand("\"Subscribe\"", dataForRotate);
+        String sensorsToRotate = "{\"EV3\": {\"1\":{\"B\": 90, \"speed\": 10}}}";
+        emptyCommandHandler.executeCommand("\"Rotate\"", sensorsToRotate);
         RobotSensorsData _robotSensorsData = emptyCommandHandler.getRobotSensorsData();
 
         HashMap<String, Double> portsAndValues = new HashMap<>(_robotSensorsData.getPortsAndValues("EV3", "_1"));
@@ -138,14 +124,45 @@ public class CommandHandlerTest {
     // -------------------- Set Sensor -----------------
     @org.junit.Test
     public void setSensorTest() throws IOException {
-        emptyCommandHandler.executeCommand("\"Build\"",robotJson);
-        emptyCommandHandler.executeCommand("\"Subscribe\"", dataForDrive);
-        emptyCommandHandler.executeCommand("\"SetSensor\"",setSensorJsonNoIndex);
+        String dataForSensor = "{\"EV3\": {\"1\": [\"B\"]}}";
+        emptyCommandHandler.executeCommand("\"Subscribe\"", dataForSensor);
+        String sensorsToSet = "{\"EV3\": {\"B\": 1.0}}";
+        emptyCommandHandler.executeCommand("\"SetSensorMode\"", sensorsToSet);
         RobotSensorsData _robotSensorsData = emptyCommandHandler.getRobotSensorsData();
 
         HashMap<String, Double> portsAndValues = new HashMap<>(_robotSensorsData.getPortsAndValues("EV3", "_1"));
-//        MockBoard ev3 = (MockBoard) emptyCommandHandler.getRobot().get(BoardTypeEnum.EV3).get(1);
-
         assertEquals(portsAndValues.get("B"), 1.0, 0.01);
+    }
+}
+
+class TestCommandHandler extends CommandHandler {
+
+    TestCommandHandler(RobotSensorsData robotSensorsData) {
+        super(robotSensorsData);
+    }
+
+    @Override
+    void build(String json) {
+        Map<IPortEnums, Double> ev3PortsMap1 = new HashMap<>();
+        ev3PortsMap1.put(Ev3DrivePort.A, 10.0);
+        ev3PortsMap1.put(Ev3DrivePort.B, 10.0);
+        ev3PortsMap1.put(Ev3DrivePort.C, 10.0);
+        ev3PortsMap1.put(Ev3SensorPort._1, 10.0);
+        ev3PortsMap1.put(Ev3SensorPort._4, 10.0);
+        Map<IPortEnums, Double> ev3PortsMap2 = new HashMap<>();
+        ev3PortsMap2.put(Ev3SensorPort._2, 10.0);
+        ev3PortsMap2.put(Ev3SensorPort._3, 10.0);
+        Map<IPortEnums, Double> grovePiPortsMap = new HashMap<>();
+        grovePiPortsMap.put(GrovePiPort.D2, 1.0);
+        grovePiPortsMap.put(GrovePiPort.D3, 1.0);
+
+        Map<Integer, IBoard> ev3 = Map.of(1, new TestBoard(ev3PortsMap1), 2, new TestBoard(ev3PortsMap2));
+        Map<Integer, IBoard> grovePi = Map.of(1, new TestBoard(grovePiPortsMap));
+
+        Map<BoardTypeEnum, Map<Integer, IBoard>> robot = new HashMap<>();
+        robot.put(BoardTypeEnum.EV3, ev3);
+        robot.put(BoardTypeEnum.GrovePi, grovePi);
+
+        this.setRobot(robot);
     }
 }
