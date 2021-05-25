@@ -19,10 +19,10 @@ import java.util.stream.Stream;
 @SuppressWarnings("rawtypes")
 class CommandHandler {
 
-    private RobotSensorsData robotSensorsData;
+    RobotSensorsData robotSensorsData;
 
 
-    private Map<BoardTypeEnum, Map<Integer, IBoard>> robot;
+    Map<BoardTypeEnum, Map<Integer, IBoard>> robot;
     private final int commandTimeout = 100;
 
     // Uniform Interface for commands arriving from BPjs
@@ -134,7 +134,7 @@ class CommandHandler {
     void build(String json) {
         try {
             robot = Robot.JsonToRobot(json);
-        } catch (Exception e){
+        } catch (Exception e) {
             e.printStackTrace();
         }
 //        Map<Integer, IBoard> ev3 = Map.of(1, new MockBoard(), 2, new MockBoard());
@@ -440,17 +440,6 @@ class CommandHandler {
         }
     }
 
-    RobotSensorsData getRobotSensorsData() {
-        return robotSensorsData;
-    }
-
-    public Map<BoardTypeEnum, Map<Integer, IBoard>> getRobot() {
-        return robot;
-    }
-
-    void setRobot(Map<BoardTypeEnum, Map<Integer, IBoard>> robot) {
-        this.robot = robot;
-    }
 
     /**
      * Uniform Interface for BPjs Commands

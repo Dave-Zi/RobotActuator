@@ -165,4 +165,14 @@ class TestCommandHandler extends CommandHandler {
 
         this.setRobot(robot);
     }
+
+    RobotSensorsData getRobotSensorsData() {
+        return robotSensorsData;
+    }
+
+
+    private void setRobot(Map<BoardTypeEnum, Map<Integer, IBoard>> robot) {
+        this.robot = robot;
+    }
+
 }
