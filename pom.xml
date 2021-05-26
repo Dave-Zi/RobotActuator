@@ -42,7 +42,7 @@
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
             <version>4.12</version>
-            <scope>RobotActuator/src/test</scope>
+            <scope>src/test</scope>
         </dependency>
     </dependencies>
 
