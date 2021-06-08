@@ -121,18 +121,34 @@ public class CommandHandlerTest {
         assertEquals(portsAndValues.get("B"), 10, 0.01);
     }
 
-    // -------------------- Set Sensor -----------------
+    // -------------------- Set Sensor Mode -----------------
     @org.junit.Test
-    public void setSensorTest() throws IOException {
+    public void setSensorModeTest() throws IOException {
         String dataForSensor = "{\"EV3\": {\"1\": [\"B\"]}}";
         emptyCommandHandler.executeCommand("\"Subscribe\"", dataForSensor);
-        String sensorsToSet = "{\"EV3\": {\"B\": 1.0}}";
+        String sensorsToSet = "{\"EV3\": {\"B\": 10.0}}";
         emptyCommandHandler.executeCommand("\"SetSensorMode\"", sensorsToSet);
         RobotSensorsData _robotSensorsData = emptyCommandHandler.getRobotSensorsData();
 
         HashMap<String, Double> portsAndValues = new HashMap<>(_robotSensorsData.getPortsAndValues("EV3", "_1"));
-        assertEquals(portsAndValues.get("B"), 1.0, 0.01);
+        assertEquals(portsAndValues.get("B"), 10.0, 0.01);
     }
+    // -------------------- Set Sensor -----------------
+    @org.junit.Test
+    public void setActuatorDataTest() throws IOException {
+        String dataForSensor = "{\"EV3\": {\"1\": [\"C\"]}}";
+        emptyCommandHandler.executeCommand("\"Subscribe\"", dataForSensor);
+        String sensorsToSet = "{\"EV3\": {\"C\": 1.0}}";
+        emptyCommandHandler.executeCommand("\"setActuatorData\"", sensorsToSet);
+        RobotSensorsData _robotSensorsData = emptyCommandHandler.getRobotSensorsData();
+
+        HashMap<String, Double> portsAndValues = new HashMap<>(_robotSensorsData.getPortsAndValues("EV3", "_1"));
+        assertEquals(portsAndValues.get("C"), 1.0, 0.01);
+    }
+
+
+
+
 }
 
 class TestCommandHandler extends CommandHandler {
@@ -146,7 +162,7 @@ class TestCommandHandler extends CommandHandler {
         Map<IPortEnums, Double> ev3PortsMap1 = new HashMap<>();
         ev3PortsMap1.put(Ev3DrivePort.A, 10.0);
         ev3PortsMap1.put(Ev3DrivePort.B, 10.0);
-        ev3PortsMap1.put(Ev3DrivePort.C, 10.0);
+        ev3PortsMap1.put(Ev3DrivePort.C, 1.0);
         ev3PortsMap1.put(Ev3SensorPort._1, 10.0);
         ev3PortsMap1.put(Ev3SensorPort._4, 10.0);
         Map<IPortEnums, Double> ev3PortsMap2 = new HashMap<>();
