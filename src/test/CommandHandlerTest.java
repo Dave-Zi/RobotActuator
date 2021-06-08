@@ -141,7 +141,6 @@ public class CommandHandlerTest {
 
     @org.junit.Test
     public void driveWithNicknameTest() throws IOException {
-
         String dataForDrive = "{\"EV3\": {\"EV333\": [\"B\"]}}";
         emptyCommandHandler.executeCommand("\"Subscribe\"", dataForDrive);
         String sensorsToDrive = "{\"EV3\": {\"EV333\": {\"B\": 10}}}";
@@ -151,6 +150,7 @@ public class CommandHandlerTest {
         HashMap<String, Double> portsAndValues = new HashMap<>(_robotSensorsData.getPortsAndValues("EV3", "EV333"));
         assertEquals(portsAndValues.get("B"), 10, 0.01);
     }
+
     // -------------------- Rotate -----------------
     @org.junit.Test
     public void rotateTest() throws IOException {
@@ -165,18 +165,41 @@ public class CommandHandlerTest {
         assertEquals(portsAndValues.get("B"), 10, 0.01);
     }
 
+    @org.junit.Test
+    public void rotateWithNicknameTest() throws IOException {
+        String dataForRotate = "{\"EV3\": {\"EV321\": [\"A\"]}}";
+        emptyCommandHandler.executeCommand("\"Subscribe\"", dataForRotate);
+        String sensorsToRotate = "{\"EV3\": {\"EV321\":{\"A\": 90, \"speed\": 10}}}";
+        emptyCommandHandler.executeCommand("\"Rotate\"", sensorsToRotate);
+        RobotSensorsData _robotSensorsData = emptyCommandHandler.getRobotSensorsData();
+
+        HashMap<String, Double> portsAndValues = new HashMap<>(_robotSensorsData.getPortsAndValues("EV3", "EV321"));
+        assertEquals(portsAndValues.get("A"), 10, 0.01);
+    }
+
     // -------------------- Set Sensor Mode -----------------
     @org.junit.Test
     public void setSensorModeTest() throws IOException {
-        String dataForSensor = "{\"EV3\": {\"1\": [\"B\"]}}";
+        String dataForSensor = "{\"EV3\": {\"1\": [\"C\"]}}";
         emptyCommandHandler.executeCommand("\"Subscribe\"", dataForSensor);
-        String sensorsToSet = "{\"EV3\": {\"B\": 10.0}}";
+        String sensorsToSet = "{\"EV3\": {\"C\": 1.0}}";
         emptyCommandHandler.executeCommand("\"SetSensorMode\"", sensorsToSet);
         RobotSensorsData _robotSensorsData = emptyCommandHandler.getRobotSensorsData();
 
         HashMap<String, Double> portsAndValues = new HashMap<>(_robotSensorsData.getPortsAndValues("EV3", "_1"));
-      //------------------- TODO
-        //  assertEquals(portsAndValues.get("B"), 10.0, 0.01);
+        assertEquals(portsAndValues.get("C"), 1.0, 0.01);
+    }
+
+    @org.junit.Test
+    public void setSensorModeWithNicknameTest() throws IOException {
+        String dataForSensor = "{\"EV3\": {\"MY_EV3\": [\"C\"]}}";
+        emptyCommandHandler.executeCommand("\"Subscribe\"", dataForSensor);
+        String sensorsToSet = "{\"EV3\":{\"MY_EV3\": {\"C\": 1.0}}}";
+        emptyCommandHandler.executeCommand("\"SetSensorMode\"", sensorsToSet);
+        RobotSensorsData _robotSensorsData = emptyCommandHandler.getRobotSensorsData();
+
+        HashMap<String, Double> portsAndValues = new HashMap<>(_robotSensorsData.getPortsAndValues("EV3", "MY_EV3"));
+        assertEquals(portsAndValues.get("C"), 1.0, 0.01);
     }
     // -------------------- Set Sensor -----------------
     @org.junit.Test
@@ -191,7 +214,17 @@ public class CommandHandlerTest {
         assertEquals(portsAndValues.get("C"), 1.0, 0.01);
     }
 
+    @org.junit.Test
+    public void setActuatorDataWithNicknameTest() throws IOException {
+        String dataForSensor = "{\"EV3\": {\"EV3_EV3\": [\"C\"]}}";
+        emptyCommandHandler.executeCommand("\"Subscribe\"", dataForSensor);
+        String sensorsToSet = "{\"EV3\": {\"EV3_EV3\" :{\"C\": 1.0}}}";
+        emptyCommandHandler.executeCommand("\"setActuatorData\"", sensorsToSet);
+        RobotSensorsData _robotSensorsData = emptyCommandHandler.getRobotSensorsData();
 
+        HashMap<String, Double> portsAndValues = new HashMap<>(_robotSensorsData.getPortsAndValues("EV3", "\"EV3_EV3\""));
+        assertEquals(portsAndValues.get("C"), 1.0, 0.01);
+    }
 
 
 }
