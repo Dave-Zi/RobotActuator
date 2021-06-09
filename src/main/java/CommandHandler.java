@@ -49,7 +49,7 @@ class CommandHandler {
             {"\"Drive\"", drive},
             {"\"Rotate\"", rotate},
             {"\"SetSensorMode\"", setSensorMode},
-            {"\"setActuatorData\"", setActuatorData}
+            {"\"SetActuatorData\"", setActuatorData}
 
     }).collect(Collectors.toMap(data -> (String) data[0], data -> (ICommand) data[1]));
 
@@ -341,7 +341,7 @@ class CommandHandler {
                     Double speed = getSpeed(mapping);
                     Map<IPortEnums, Double> portsAndValues = new HashMap<>();
                     mapping.forEach((port, value) ->
-                            portsAndValues.put(keyAsBoard.getPortType(port), value));
+                            portsAndValues.put(keyAsBoard.getPortType(fixName(port)), value));
 
                     result.get(keyAsBoard).put(boardIndexAsInt, new AbstractMap.SimpleEntry<>(portsAndValues, speed));
 
@@ -356,7 +356,7 @@ class CommandHandler {
 
                 Double speed = getSpeed(boardPorts);
                 boardPorts.forEach((port, value) ->
-                        portsResult.put(keyAsBoard.getPortType(port), value));
+                        portsResult.put(keyAsBoard.getPortType(fixName(port)), value));
 
                 result.get(keyAsBoard).put(1, new AbstractMap.SimpleEntry<>(portsResult, speed));
             }
@@ -443,6 +443,11 @@ class CommandHandler {
         }
     }
 
+    // Prepend '_' to port and board index names that start with a number
+    private String fixName(String name) {
+        char firstChar = name.charAt(0);
+        return Character.isDigit(firstChar) ? "_" + name : name;
+    }
 
     /**
      * Uniform Interface for BPjs Commands
