@@ -45,6 +45,7 @@ public class MainTest {
             if (robotSensorsData.isUpdated()) {
                 String json = robotSensorsData.toJson();
                 communicationHandler.send(json, QueueNameEnum.Data);
+
             }
         }
     }
