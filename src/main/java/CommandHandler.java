@@ -35,9 +35,6 @@ class CommandHandler {
     private final ICommand setActuatorData = this::setActuatorData;
 
 
-
-
-
     // Thread for data collection from robot sensors
     private final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
     private ScheduledFuture<?> dataCollectionFuture;
@@ -108,7 +105,7 @@ class CommandHandler {
      *
      * @param json string from BPjs messages
      */
-    private void subscribe(String json) {
+    void subscribe(String json) {
         robotSensorsData.addToBoardsMap(json);
         startExecutor();
     }
@@ -122,7 +119,7 @@ class CommandHandler {
      *
      * @param json string from BPjs messages
      */
-    private void unsubscribe(String json) {
+    void unsubscribe(String json) {
         robotSensorsData.removeFromBoardsMap(json);
         startExecutor();
     }
@@ -376,7 +373,7 @@ class CommandHandler {
                     robotSensorsDataCopy.getPorts(boardString, indexString).forEach(portString -> {
                         IPortEnums port = board.getPortType(portString);
                         Double data = robot.get(board).get(index).getDoubleSensorData(port);
-                        if (data != null && !Double.isNaN(data)){
+                        if (data != null && !Double.isNaN(data)) {
                             jsonPorts.addProperty(portString, data);
                         }
                     });
