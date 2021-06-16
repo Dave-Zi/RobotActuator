@@ -1,0 +1,6 @@
+#NOTE: This is a Maven Resolver internal implementation file, its format can be changed without prior notice.
+#Thu Jun 17 01:01:01 IDT 2021
+Robot-1.0-20210616.215001-53.pom>myMavenRepo=
+Robot-1.0-20210616.215001-53.jar>myMavenRepo=
+Robot-1.0-SNAPSHOT.jar>=
+Robot-1.0-SNAPSHOT.pom>=

@@ -1,0 +1,8 @@
+#NOTE: This is a Maven Resolver internal implementation file, its format can be changed without prior notice.
+#Thu Jun 17 01:01:01 IDT 2021
+MindControl-1.0-SNAPSHOT.pom>myMavenRepo=
+MindControl-1.0-SNAPSHOT.jar>=
+MindControl-1.0-20210616.215158-20.jar>myMavenRepo=
+MindControl-1.0-SNAPSHOT.pom>=
+MindControl-1.0-20210616.215158-20.pom>myMavenRepo=
+MindControl-1.0-SNAPSHOT.jar>myMavenRepo=
